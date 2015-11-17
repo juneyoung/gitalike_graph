@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='utf-8'>
+	<title>Github Contibution graph</title>
+	<script src='http://d3js.org/d3.v3.min.js'></script>
+	<script src='./calendar_graph.js'></script>
+</head>
+<body>
+	<svg id='gb_id'></svg>
+	<div id='dateviewer'></div>
+</body>
+</html>
+
+<script>
+	//dataset 이 어떻게 구성되는지는 알아봐야함. // 실제로 들어가는 것
+	// 첫번째 배열은 첫세로 열, 두번째 배열은 두번째 세로열, 수치는 색과 관련이 있음 
+	// 이 예제에서 가로열에 대한 리미트는 제공되지 않음 
+	document.addEventListener('DOMContentLoaded', attachGraph1, false);
+
+	function attachGraph1(){
+		//GRIDMANAGER.setDivByElem(document.getElementById('sample')); ==> 로딩 순서 문제
+		GRIDMANAGER.setSvgById('gb_id');
+		GRIDMANAGER.setGridOptions({gridWidth:15, gridHeight:15});
+		GRIDMANAGER.buildGraph();
+
+		var playground = d3.select('#' + GRIDMANAGER.svg.id);
+		var g = playground.selectAll('g');
+
+		var g1 = g.data(GRIDMANAGER.colorset).enter().append("g");
+
+		//여기서 칸의 위치가 결정됨 //가로 간격 
+		//g1.attr("transform",function(d, i) { return "translate("+(i * 12 + 2)+",0)"});
+		g1.attr("transform",function(d, i) { return "translate(" + GRIDMANAGER.getGridLocation(i).x + ",0)"});
+    
+	    var rect = g1.selectAll("rect");
+	    var rect_each = rect.data(function(d){ return d;}).enter().append("rect");
+	    
+	    rect_each.style("fill",function(d){
+	      var p = Math.floor( 80 *  (50 - d) / 50);
+	      return "hsl(120,80%,"+ (p + 15) +"%)";
+	    })
+	    //세로 간격
+	    //.attr("transform",function(d,i){ return "translate(0," + (i * 12 + 2) + ")"}).text(function(d){return d;}); 
+	    .attr("transform",function(d,i){ return "translate(0," + GRIDMANAGER.getGridLocation(i).y + ")"}).text(function(d){return d;});
+
+	    rect_each.on("mouseover",function(d){
+          	var parentNode = this.parentNode;
+          	//parentNode 의 번호가 y 좌표 
+          	//grandParentNode 의 번호가 x 좌표 
+          	var xAxis = getIndexFromParent(parentNode);
+          	var yAxis = getIndexFromParent(this);
+          	//document.getElementById('dateviewer').innerText = 'x:' + xAxis + ', y: ' + yAxis;
+          	document.getElementById('dateviewer').innerText = getFormatDate(GRIDMANAGER.getInfos(xAxis,yAxis).date);
+        }).on("mouseout",function(d,i){
+	    	document.getElementById('dateviewer').innerText = '';
+        });
+	}
+
+</script>
+
+<style>
+
+	#gb_id {
+		border: solid 1px black;
+		width: 100%;
+	}
+
+	#gb_id rect {
+		width: 15px;
+		height: 15px;
+		/*
+		width: 15px;
+		height: 15px;
+		*/
+	}
+
+	#gb_id rect:hover{
+		stroke: black;
+	}
+</style>
