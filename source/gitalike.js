@@ -1,6 +1,6 @@
 const NAMESPACE = 'http://www.w3.org/2000/svg';
 const strokeColor = '#FFFFFF';
-
+const MONTHSTR = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'];
 
 /**
 ************************************
@@ -53,8 +53,10 @@ Cell.prototype.setData = function(count, date, text){
 var GITALIKE = GITALIKE || new gitALike();
 
 function gitALike(){
-	this.dataset = [];
+	this.dataset = {};
 	this.colorset = ['#ededed','#ACD5F2', '#7FA8D1', '#49729B', '#254E77'];
+
+	this.monthgrid_top = 25;
 
 	this.rectWidth = 15;
 	this.rectHeight = 15;
@@ -72,6 +74,22 @@ function gitALike(){
 	this.div = null;
 	this.outer_svg = null;
 	this.inner_svg = null;
+	this.tooltip_svg = null;
+}
+
+// Optional Uses...
+gitALike.prototype.setGridOptions = function(options){
+	this.rectWidth = options.width;
+	this.rectHeight = options.height;
+	this.xPadPercentage = options.paddingX;
+	this.yPadPercentage = options.paddingY;
+	this.rectDefaultColor = options.defaultColor;
+}
+
+
+gitALike.prototype.setDataOptions = function(options){
+	this.gridColorUnit = options.dataLevel;
+	this.colorset = options.dataColorSet;
 }
 
 //init objects
@@ -97,16 +115,68 @@ gitALike.prototype.createSVGLayers = function(){
 
 	this.outer_svg = createVectorElement('svg');
 	this.inner_svg = createVectorElement('svg');
+	this.tooltip_svg = createVectorElement('svg');
 
 	this.outer_svg.id = 'outer_svg';
 	this.inner_svg.id = 'inner_svg';
+	this.tooltip_svg.id = 'tooltip_svg';
+	this.drawTicks();
 
 	this.outer_svg.setAttribute('width', window.innerWidth);
 	this.addMonthRect(new Date(), this.inner_svg);
 	this.outer_svg.appendChild(this.inner_svg);
 	this.div.appendChild(this.outer_svg);
+	this.div.appendChild(this.tooltip_svg);
+
+	var rects = this.inner_svg.getElementsByTagName('rect');
+	for(var i = 0; i < rects.length; i++){
+		var eachRect = rects[i];
+		eachRect.addEventListener('mouseover',function(){
+			var datasetId = this.parentNode.parentNode.id + this.getAttribute('day');
+		},false);
+
+		eachRect.addEventListener('mouseout',function(){
+			//do something
+		},false);
+	}
+
+	//this.displayMonths();
 }
 
+gitALike.prototype.drawTicks = function(){
+	for(var i = 1; i <= this.colorset.length; i++){
+		var grid = createVectorElement('g');
+		var rect = createVectorElement('rect');
+
+		rect.setAttribute('width', this.rectWidth);
+		rect.setAttribute('height', this.rectHeight);
+
+		//
+		rect.setAttribute('x', (i - 1) * (this.rectWidth + this.rectPaddingX));
+		rect.setAttribute('y', this.rectPaddingY);
+		rect.style.fill = this.colorset[i - 1];
+
+		var title = createVectorElement('title');
+		title.textContent = 'over ' + (i * this.gridColorUnit);
+		rect.appendChild(title);
+		grid.appendChild(rect);
+		this.tooltip_svg.appendChild(grid);
+	}
+}
+
+gitALike.prototype.displayMonths = function(){
+	var monthGrids = document.getElementById('inner_svg').getElementsByTagName('svg');
+	for(var i = 0; i < monthGrids.length; i++){
+		var monthInStr = monthGrids[i].id;
+		monthInStr = monthInStr.substring(monthInStr.length - 2, monthInStr.length);
+		var strValue = MONTHSTR[(monthInStr * 1) % 12];
+		console.log(strValue);
+		var text = createVectorElement('text');
+		text.textContent = strValue;
+		this.div.appendChild(text);
+
+	}
+}
 
 //Internal :: grouping MonthGrids
 gitALike.prototype.addMonthRect = function (date, monthGroupSvg){
@@ -146,30 +216,24 @@ gitALike.prototype.drawSingleDateGrid = function(singleMonth, bgSvg){
 
 			//x 와 y 의 위치 px
 			rect.setAttribute('x', i * (this.rectWidth + this.rectPaddingX));
-			rect.setAttribute('y', j * (this.rectHeight + this.rectPaddingY));
+			rect.setAttribute('y', this.monthgrid_top + j * (this.rectHeight + this.rectPaddingY));
 			rect.style.fill = this.rectDefaultColor;
 
-			rect.addEventListener('mouseover', function(){
-				this.style.stroke = strokeColor;
-			}, false);
-
-			rect.addEventListener('mouseout', function(){
-				this.style.stroke = '';
-			}, false);
-
+			var digit2Day = ((totalCnt + 1 < 10) ? '0' + (totalCnt + 1) : totalCnt + 1);
 			rect.setAttribute('class','rect_' + i + '_' + j);
+			rect.setAttribute('day', digit2Day);
 
 			grid.appendChild(rect);
 			bgSvg.appendChild(grid);
-			//console.log('coordinates : ', i, ', ', j);
-			totalCnt++;
-			var dsKey = singleMonth['yyyymm'] + ((totalCnt < 10) ? '0' + totalCnt : totalCnt);
+			var dsKey = singleMonth['yyyymm'] + digit2Day;
 			var cell = new Cell();
 			cell.x = i; cell.y = j;
 			cell.date = dsKey;
 			cell.count = 0;
 			this.dataset[dsKey] = cell; 
-
+			this.addToolTips(rect, this.dataset[dsKey]);
+			//console.log('coordinates : ', i, ', ', j);
+			totalCnt++;
 		}
 	}
 }
@@ -191,12 +255,23 @@ gitALike.prototype.pushData = function (dataArr) {
 gitALike.prototype.fillColor = function(yyyyMMdd, dataset){
 	var monthSvgId = yyyyMMdd.substring(0, yyyyMMdd.length - 2);
 	var monthSvg = document.getElementById(monthSvgId);
-	console.log('rect_'+ dataset.x + '_' + dataset.y);
 	var target = monthSvg.getElementsByClassName('rect_'+ dataset.x + '_' + dataset.y)[0];
 	var colorIndex = Math.floor(dataset.count / this.gridColorUnit);
 	colorIndex = (colorIndex > this.colorset.length - 1) ? this.colorset.length - 1 : colorIndex;
 	target.style.fill = this.colorset[colorIndex];
+	this.addToolTips(target, dataset);
 }
+
+gitALike.prototype.addToolTips = function(rect, dataset){
+	//adding tooltips
+	while(rect.firstChild){
+		rect.removeChild(rect.firstChild);
+	}
+	var title = createVectorElement('title');
+	title.textContent = dataset.date + ' : ' + dataset.count;
+	rect.appendChild(title);
+}
+
 
 /**
 ************************************
@@ -258,4 +333,8 @@ function getFormatDate(date){
 	var mm = (date.getMonth() + 1).toString(); // getMonth() is zero-based
 	var dd  = date.getDate().toString();
 	return yyyy + (mm[1]?mm:"0"+mm[0]) + (dd[1]?dd:"0"+dd[0]); // padding
+}
+
+function isEmpty(val) {
+	return (val == null || typeof val == 'undefined') ? true : false;
 }
