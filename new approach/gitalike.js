@@ -54,7 +54,7 @@ var GITALIKE = GITALIKE || new gitALike();
 
 function gitALike(){
 	this.dataset = [];
-	this.colorset = [];
+	this.colorset = ['#ededed','#ACD5F2', '#7FA8D1', '#49729B', '#254E77'];
 
 	this.rectWidth = 15;
 	this.rectHeight = 15;
@@ -65,6 +65,9 @@ function gitALike(){
 	this.startX = 0;
 	this.rectDefaultColor = '#ededed';
 
+	//by this unit, color of grid will be more darker;
+	this.gridColorUnit = 20;
+
 	//HTML Elements
 	this.div = null;
 	this.outer_svg = null;
@@ -74,7 +77,6 @@ function gitALike(){
 //init objects
 
 gitALike.prototype.initWithElem = function(elem){
-	console.log(this);
 	if(typeof elem == '$'){
 		this.div = elem[0];
 	}else{
@@ -153,28 +155,48 @@ gitALike.prototype.drawSingleDateGrid = function(singleMonth, bgSvg){
 
 			rect.addEventListener('mouseout', function(){
 				this.style.stroke = '';
-			}, false)
+			}, false);
+
+			rect.setAttribute('class','rect_' + i + '_' + j);
 
 			grid.appendChild(rect);
 			bgSvg.appendChild(grid);
 			//console.log('coordinates : ', i, ', ', j);
 			totalCnt++;
 			var dsKey = singleMonth['yyyymm'] + ((totalCnt < 10) ? '0' + totalCnt : totalCnt);
-			//this.dataset[dsKey] = {};
-			//this.dataset[dsKey].x = i;
-			//this.dataset[dsKey].y = j; 
 			var cell = new Cell();
 			cell.x = i; cell.y = j;
 			cell.date = dsKey;
-			cell.cnt = 0;
+			cell.count = 0;
 			this.dataset[dsKey] = cell; 
 
 		}
 	}
 }
 
+gitALike.prototype.pushData = function (dataArr) {
+	try{
+		for(var i = 0; i < dataArr.length; i++){
+			var single = dataArr[i];
+			this.dataset[single.date].count = single.count;
+			this.dataset[single.date].text = single.text;
+			this.fillColor(single.date, this.dataset[single.date]);
+		}
+	}catch(exception){		
+		console.error('got some error : ' + exception);
+		console.log('FYI, data structure must be something like {date: "yyyyMMdd", count : n, text: "blah"} or check date range\ndate must within a year!');
+	}
+}
 
-
+gitALike.prototype.fillColor = function(yyyyMMdd, dataset){
+	var monthSvgId = yyyyMMdd.substring(0, yyyyMMdd.length - 2);
+	var monthSvg = document.getElementById(monthSvgId);
+	console.log('rect_'+ dataset.x + '_' + dataset.y);
+	var target = monthSvg.getElementsByClassName('rect_'+ dataset.x + '_' + dataset.y)[0];
+	var colorIndex = Math.floor(dataset.count / this.gridColorUnit);
+	colorIndex = (colorIndex > this.colorset.length - 1) ? this.colorset.length - 1 : colorIndex;
+	target.style.fill = this.colorset[colorIndex];
+}
 
 /**
 ************************************
@@ -216,24 +238,6 @@ function calcDays(){
 	}
 	return ret;
 }
-
-/*
-function countDaysPerMonth(dateObj){
-	var obj = {daysArr: [], totalDays : 0};
-	var startCountDate = dateObj.startDate;
-	for(var i = 0; i < 12; i++){
-		var targetDate = new Date();
-		targetDate.setMonth(startCountDate.getMonth() - i);
-		var year = targetDate.getFullYear();
-		var month = targetDate.getMonth();
-
-		var days = new Date(year, month, 0).getDate();
-		obj.daysArr.push(days);
-		obj.totalDays += days;
-	}
-	return obj;
-}
-*/
 
 function getStdDates(){
 	var ret = {startDate : '', endDate : ''};
