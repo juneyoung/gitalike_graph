@@ -119,15 +119,14 @@ GridManager.prototype.generateDateGrid = function(totalCnt){
 }
 
 //Working on...
-/*
 GridManager.prototype.setData = function(dataArr){
 	//dataArr looks like...
 	//[{date: 'YYYYMMDD', count: 'n', text: 'some text'}]
 	for(var i = 0; i < dataArr.length, i++){
-		for(var j = 0; j < this.dataset) 
+		//var singleData = dataArr[i];
+		//for(var j = 0; j < this.dataset) 
 	}
 }
-*/
 
 //============================================================
 //============================================================
