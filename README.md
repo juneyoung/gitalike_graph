@@ -1,9 +1,11 @@
 # GITALIKE
 by <b>Juneyoung Oh</b><br>
 Writen in 17.NOV.15<br>
+<!--
 <a href='README.kr.md'>KOR</a>
+-->
 
-[![what does it looks like](/sample/screenshot_1120.png)
+![what does it looks like](/sample/screenshot_1120.png)
 
 Easy github commit graph like graph with no dependencies.<br>
 I did test on Chrome :-)<br>
